@@ -319,6 +319,15 @@ void check_node(
         ") has zero input and zero output.");
   }
 
+  // Put the removed experimental ops here
+  if (node.op_type() == "ConstantFill") {
+    std::cerr << "Warning: " << node.op_type() << " was a removed "
+      << " experimental ops. In the future, we may directly "
+      << "reject this operator. Please update your model as soon "
+      << "as possible.";
+    return;
+  }
+
   // Resolve domain for node
   const auto& opset_imports = ctx.get_opset_imports();
   auto dit = opset_imports.find(node.domain());
@@ -386,8 +395,15 @@ void check_graph(
   output_names.insert(
       parent_lex.output_names.begin(), parent_lex.output_names.end());
   for (const auto& init : graph.initializer()) {
-    if (!output_names.count(init.name())) {
-      fail_check(init.name() + " in initializer but not in graph input");
+    if (ctx.get_ir_version() <= 0x00000003) {
+      // Initializers are a subset of graph inputs for IR_VERSION <= 3
+      if (!output_names.count(init.name())) {
+        fail_check(init.name() + " in initializer but not in graph input");
+      }
+    } else {
+      // An initializer is allowed to have the same name as an input,
+      // but is not required to (for IR_VERSION >= 4)
+      output_names.insert(init.name());
     }
     check_tensor(init, ctx);
   }

@@ -5,9 +5,9 @@
 * [Overall Test Coverage](#overall-test-coverage)
 # Node Test Coverage
 ## Summary
-Node tests have covered 109/116 (93.97%, 5 generators excluded) common operators.
+Node tests have covered 110/117 (94.02%, 5 generators excluded) common operators.
 
-Node tests have covered 2/12 (16.67%, 0 generators excluded) experimental operators.
+Node tests have covered 2/11 (18.18%, 0 generators excluded) experimental operators.
 
 * [Covered Common Operators](#covered-common-operators)
 * [No Cover Common Operators](#no-cover-common-operators)
@@ -1345,7 +1345,7 @@ expect(node_with_asymmetric_padding, inputs=[x, W], outputs=[y_with_asymmetric_p
 
 
 ### ConvTranspose
-There are 5 test cases, listed as following:
+There are 6 test cases, listed as following:
 <details>
 <summary>convtranspose</summary>
 
@@ -1566,6 +1566,28 @@ node = onnx.helper.make_node(
 )
 expect(node, inputs=[x, W], outputs=[y],
        name='test_convtranspose_kernel_shape')
+```
+
+</details>
+<details>
+<summary>convtranspose_dilations</summary>
+
+```python
+x = np.array([[[[3., 8., 1.],  # (1, 1, 3, 3)
+                [9., 5., 7.],
+                [3., 2., 6.]]]]).astype(np.float32)
+W = np.array([[[[7., 2.],  # (1, 1, 2, 2)
+                [1., 9.]]]]).astype(np.float32)
+
+node = onnx.helper.make_node("ConvTranspose", ["X", "W"], ["Y"], dilations=[2, 2])
+
+y = np.array([[[[21., 56., 13., 16., 2.],  # [1, 1, 5, 5]
+                [63., 35., 67., 10., 14.],
+                [24., 22., 76., 76., 21.],
+                [9., 5., 88., 45., 63.],
+                [3., 2., 33., 18., 54.]]]]).astype(np.float32)
+
+expect(node, inputs=[x, W], outputs=[y], name='test_convtranspose_dilations')
 ```
 
 </details>
@@ -6078,6 +6100,192 @@ expect(node, inputs=[x], outputs=[y],
 </details>
 
 
+### TfIdfVectorizer
+There are 7 test cases, listed as following:
+<details>
+<summary>tf_batch_onlybigrams_skip0</summary>
+
+```python
+input = np.array([[1, 1, 3, 3, 3, 7], [8, 6, 7, 5, 6, 8]]).astype(np.int32)
+output = np.array([[0., 0., 0., 0., 0., 0., 0.], [0., 0., 0., 0., 1., 0., 1.]]).astype(np.float32)
+
+ngram_counts = np.array([0, 4]).astype(np.int64)
+ngram_indexes = np.array([0, 1, 2, 3, 4, 5, 6]).astype(np.int64)
+pool_int64s = np.array([2, 3, 5, 4,    # unigrams
+                        5, 6, 7, 8, 6, 7]).astype(np.int64)   # bigrams
+
+helper = TfIdfVectorizerHelper(
+    mode='TF',
+    min_gram_length=2,
+    max_gram_length=2,
+    max_skip_count=0,
+    ngram_counts=ngram_counts,
+    ngram_indexes=ngram_indexes,
+    pool_int64s=pool_int64s
+)
+node = helper.make_node_noweights()
+expect(node, inputs=[input], outputs=[output], name='test_tfidfvectorizer_tf_batch_onlybigrams_skip0')
+```
+
+</details>
+<details>
+<summary>tf_batch_onlybigrams_skip5</summary>
+
+```python
+input = np.array([[1, 1, 3, 3, 3, 7], [8, 6, 7, 5, 6, 8]]).astype(np.int32)
+output = np.array([[0., 0., 0., 0., 0., 0., 0.], [0., 0., 0., 0., 1., 1., 1.]]).astype(np.float32)
+
+ngram_counts = np.array([0, 4]).astype(np.int64)
+ngram_indexes = np.array([0, 1, 2, 3, 4, 5, 6]).astype(np.int64)
+pool_int64s = np.array([2, 3, 5, 4,    # unigrams
+                        5, 6, 7, 8, 6, 7]).astype(np.int64)   # bigrams
+
+helper = TfIdfVectorizerHelper(
+    mode='TF',
+    min_gram_length=2,
+    max_gram_length=2,
+    max_skip_count=5,
+    ngram_counts=ngram_counts,
+    ngram_indexes=ngram_indexes,
+    pool_int64s=pool_int64s
+)
+node = helper.make_node_noweights()
+expect(node, inputs=[input], outputs=[output], name='test_tfidfvectorizer_tf_batch_onlybigrams_skip5')
+```
+
+</details>
+<details>
+<summary>tf_batch_uniandbigrams_skip5</summary>
+
+```python
+input = np.array([[1, 1, 3, 3, 3, 7], [8, 6, 7, 5, 6, 8]]).astype(np.int32)
+output = np.array([[0., 3., 0., 0., 0., 0., 0.], [0., 0., 1., 0., 1., 1., 1.]]).astype(np.float32)
+
+ngram_counts = np.array([0, 4]).astype(np.int64)
+ngram_indexes = np.array([0, 1, 2, 3, 4, 5, 6]).astype(np.int64)
+pool_int64s = np.array([2, 3, 5, 4,    # unigrams
+                        5, 6, 7, 8, 6, 7]).astype(np.int64)   # bigrams
+
+helper = TfIdfVectorizerHelper(
+    mode='TF',
+    min_gram_length=1,
+    max_gram_length=2,
+    max_skip_count=5,
+    ngram_counts=ngram_counts,
+    ngram_indexes=ngram_indexes,
+    pool_int64s=pool_int64s
+)
+node = helper.make_node_noweights()
+expect(node, inputs=[input], outputs=[output], name='test_tfidfvectorizer_tf_batch_uniandbigrams_skip5')
+```
+
+</details>
+<details>
+<summary>tf_only_bigrams_skip0</summary>
+
+```python
+input = np.array([1, 1, 3, 3, 3, 7, 8, 6, 7, 5, 6, 8]).astype(np.int32)
+output = np.array([0., 0., 0., 0., 1., 1., 1.]).astype(np.float32)
+
+ngram_counts = np.array([0, 4]).astype(np.int64)
+ngram_indexes = np.array([0, 1, 2, 3, 4, 5, 6]).astype(np.int64)
+pool_int64s = np.array([2, 3, 5, 4,    # unigrams
+                        5, 6, 7, 8, 6, 7]).astype(np.int64)    # bigrams
+
+helper = TfIdfVectorizerHelper(
+    mode='TF',
+    min_gram_length=2,
+    max_gram_length=2,
+    max_skip_count=0,
+    ngram_counts=ngram_counts,
+    ngram_indexes=ngram_indexes,
+    pool_int64s=pool_int64s
+)
+node = helper.make_node_noweights()
+expect(node, inputs=[input], outputs=[output], name='test_tfidfvectorizer_tf_only_bigrams_skip0')
+```
+
+</details>
+<details>
+<summary>tf_onlybigrams_levelempty</summary>
+
+```python
+input = np.array([1, 1, 3, 3, 3, 7, 8, 6, 7, 5, 6, 8]).astype(np.int32)
+output = np.array([1., 1., 1.]).astype(np.float32)
+
+ngram_counts = np.array([0, 0]).astype(np.int64)
+ngram_indexes = np.array([0, 1, 2]).astype(np.int64)
+pool_int64s = np.array([    # unigrams none
+                       5, 6, 7, 8, 6, 7]).astype(np.int64)    # bigrams
+
+helper = TfIdfVectorizerHelper(
+    mode='TF',
+    min_gram_length=2,
+    max_gram_length=2,
+    max_skip_count=0,
+    ngram_counts=ngram_counts,
+    ngram_indexes=ngram_indexes,
+    pool_int64s=pool_int64s
+)
+node = helper.make_node_noweights()
+expect(node, inputs=[input], outputs=[output], name='test_tfidfvectorizer_tf_onlybigrams_levelempty')
+```
+
+</details>
+<details>
+<summary>tf_onlybigrams_skip5</summary>
+
+```python
+input = np.array([1, 1, 3, 3, 3, 7, 8, 6, 7, 5, 6, 8]).astype(np.int32)
+output = np.array([0., 0., 0., 0., 1., 3., 1.]).astype(np.float32)
+
+ngram_counts = np.array([0, 4]).astype(np.int64)
+ngram_indexes = np.array([0, 1, 2, 3, 4, 5, 6]).astype(np.int64)
+pool_int64s = np.array([2, 3, 5, 4,    # unigrams
+                        5, 6, 7, 8, 6, 7]).astype(np.int64)    # bigrams
+
+helper = TfIdfVectorizerHelper(
+    mode='TF',
+    min_gram_length=2,
+    max_gram_length=2,
+    max_skip_count=5,
+    ngram_counts=ngram_counts,
+    ngram_indexes=ngram_indexes,
+    pool_int64s=pool_int64s
+)
+node = helper.make_node_noweights()
+expect(node, inputs=[input], outputs=[output], name='test_tfidfvectorizer_tf_onlybigrams_skip5')
+```
+
+</details>
+<details>
+<summary>tf_uniandbigrams_skip5</summary>
+
+```python
+input = np.array([1, 1, 3, 3, 3, 7, 8, 6, 7, 5, 6, 8]).astype(np.int32)
+output = np.array([0., 3., 1., 0., 1., 3., 1.]).astype(np.float32)
+
+ngram_counts = np.array([0, 4]).astype(np.int64)
+ngram_indexes = np.array([0, 1, 2, 3, 4, 5, 6]).astype(np.int64)
+pool_int64s = np.array([2, 3, 5, 4,    # unigrams
+                        5, 6, 7, 8, 6, 7]).astype(np.int64)    # bigrams
+
+helper = TfIdfVectorizerHelper(
+    mode='TF',
+    min_gram_length=1,
+    max_gram_length=2,
+    max_skip_count=5,
+    ngram_counts=ngram_counts,
+    ngram_indexes=ngram_indexes,
+    pool_int64s=pool_int64s
+)
+node = helper.make_node_noweights()
+expect(node, inputs=[input], outputs=[output], name='test_tfidfvectorizer_tf_uniandbigrams_skip5')
+```
+
+</details>
+
+
 ### Tile
 There are 2 test cases, listed as following:
 <details>
@@ -6586,9 +6794,6 @@ expect(node, inputs=[x], outputs=[y],
 
 
 ### Affine (call for test cases)
-
-
-### ConstantFill (call for test cases)
 
 
 ### Crop (call for test cases)
