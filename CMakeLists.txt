@@ -23,6 +23,7 @@ option(ONNX_WERROR "Build with Werror" OFF)
 option(ONNX_COVERAGE "Build with coverage instrumentation" OFF)
 option(ONNX_BUILD_TESTS "Build ONNX C++ APIs Tests" OFF)
 option(ONNX_USE_LITE_PROTO "Use lite protobuf instead of full." OFF)
+option(ONNX_PROTOBUF_SHARED_LIB "Build against a shared protobuf library" OFF)
 option(ONNXIFI_ENABLE_EXT "Enable onnxifi extensions." OFF)
 if(NOT DEFINED ONNX_ML)
   if(DEFINED ENV{ONNX_ML})
@@ -62,6 +63,11 @@ endif()
 if(ONNX_BUILD_TESTS)
   list(APPEND CMAKE_MODULE_PATH ${ONNX_ROOT}/cmake/external)
   include(googletest)
+endif()
+
+if (ONNX_PROTOBUF_SHARED_LIB)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DPROTOBUF_USE_DLLS")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DPROTOBUF_USE_DLLS")
 endif()
 
 if((ONNX_USE_LITE_PROTO AND TARGET protobuf::libprotobuf-lite) OR ((NOT ONNX_USE_LITE_PROTO) AND TARGET protobuf::libprotobuf))
@@ -411,6 +417,8 @@ if(BUILD_ONNX_PYTHON)
                                            # unsigned type, result still
                                            # unsigned from include\google\protob
                                            # uf\wire_format_lite.h
+                                   /wd4251 # 'identifier' : class 'type' needs to have dll-interface to be used by clients of class 'type2'. 
+                                           # see https://github.com/protocolbuffers/protobuf/blob/master/cmake/README.md 
                                    ${EXTRA_FLAGS})
     target_compile_options(onnx_cpp2py_export PRIVATE /MT)
     add_onnx_global_defines(onnx_cpp2py_export)
@@ -458,6 +466,8 @@ if(MSVC)
                                          # unsigned type, result still unsigned:
                                          # include\google\protobuf\wire_format_l
                                          # ite.h
+                                 /wd4251 # 'identifier' : class 'type' needs to have dll-interface to be used by clients of class 'type2'. 
+                                         # see https://github.com/protocolbuffers/protobuf/blob/master/cmake/README.md 
                                  ${EXTRA_FLAGS})
   target_compile_options(onnx
                          PRIVATE /MP
@@ -469,6 +479,8 @@ if(MSVC)
                                          # exceeded, name was truncated
                                  /wd4146 # unary minus operator applied to
                                          # unsigned type, result still unsigned
+                                 /wd4251 # 'identifier' : class 'type' needs to have dll-interface to be used by clients of class 'type2'. 
+                                         # see https://github.com/protocolbuffers/protobuf/blob/master/cmake/README.md 
                                  ${EXTRA_FLAGS})
   add_msvc_runtime_flag(onnx_proto)
   add_msvc_runtime_flag(onnx)
