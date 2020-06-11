@@ -17,7 +17,7 @@ class ONNX_OPERATOR_SET_SCHEMA_CLASS_NAME(OnnxML, 1, CategoryMapper);
 class ONNX_OPERATOR_SET_SCHEMA_CLASS_NAME(OnnxML, 1, DictVectorizer);
 class ONNX_OPERATOR_SET_SCHEMA_CLASS_NAME(OnnxML, 1, FeatureVectorizer);
 class ONNX_OPERATOR_SET_SCHEMA_CLASS_NAME(OnnxML, 1, Imputer);
-class ONNX_OPERATOR_SET_SCHEMA_CLASS_NAME(OnnxML, 1, LabelEncoder);
+// class ONNX_OPERATOR_SET_SCHEMA_CLASS_NAME(OnnxML, 1, LabelEncoder);
 class ONNX_OPERATOR_SET_SCHEMA_CLASS_NAME(OnnxML, 1, LinearClassifier);
 class ONNX_OPERATOR_SET_SCHEMA_CLASS_NAME(OnnxML, 1, LinearRegressor);
 class ONNX_OPERATOR_SET_SCHEMA_CLASS_NAME(OnnxML, 1, Normalizer);
@@ -45,8 +45,8 @@ class OpSet_OnnxML_ver1 {
     fn(GetOpSchema<ONNX_OPERATOR_SET_SCHEMA_CLASS_NAME(
            OnnxML, 1, FeatureVectorizer)>());
     fn(GetOpSchema<ONNX_OPERATOR_SET_SCHEMA_CLASS_NAME(OnnxML, 1, Imputer)>());
-    fn(GetOpSchema<ONNX_OPERATOR_SET_SCHEMA_CLASS_NAME(
-           OnnxML, 1, LabelEncoder)>());
+    // fn(GetOpSchema<ONNX_OPERATOR_SET_SCHEMA_CLASS_NAME(
+    //       OnnxML, 1, LabelEncoder)>());
     fn(GetOpSchema<ONNX_OPERATOR_SET_SCHEMA_CLASS_NAME(
            OnnxML, 1, LinearClassifier)>());
     fn(GetOpSchema<ONNX_OPERATOR_SET_SCHEMA_CLASS_NAME(
@@ -73,7 +73,8 @@ class ONNX_OPERATOR_SET_SCHEMA_CLASS_NAME(OnnxML, 2, LabelEncoder);
 class OpSet_OnnxML_ver2 {
  public:
   static void ForEachSchema(std::function<void(OpSchema&&)> fn) {
-    fn(GetOpSchema<ONNX_OPERATOR_SET_SCHEMA_CLASS_NAME(OnnxML, 2, LabelEncoder)>());
+    fn(GetOpSchema<ONNX_OPERATOR_SET_SCHEMA_CLASS_NAME(
+           OnnxML, 2, LabelEncoder)>());
   }
 };
 

@@ -221,7 +221,7 @@ struct LiftLexicalReferences : public FullGraphBasedPass {
       for (auto& ref : unresolved) {
         errmsg += ref + ",";
       }
-      throw std::runtime_error(errmsg);
+      abort(); // throw std::runtime_error(errmsg);
     }
     return std::shared_ptr<PostPassAnalysis>(new PostPassAnalysis());
   }

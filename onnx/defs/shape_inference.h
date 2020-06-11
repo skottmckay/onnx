@@ -42,6 +42,10 @@ class InferenceError final : public std::runtime_error {
   std::string expanded_message_;
 };
 
+#ifdef ONNX_NO_RTTI
+#define fail_type_inference(...) static_cast<void>(0);
+#define fail_shape_inference(...) static_cast<void>(0);
+#else
 #define fail_type_inference(...)        \
   throw ONNX_NAMESPACE::InferenceError( \
       ONNX_NAMESPACE::MakeString("[TypeInferenceError] ", __VA_ARGS__));
@@ -49,6 +53,7 @@ class InferenceError final : public std::runtime_error {
 #define fail_shape_inference(...)       \
   throw ONNX_NAMESPACE::InferenceError( \
       ONNX_NAMESPACE::MakeString("[ShapeInferenceError] ", __VA_ARGS__));
+#endif
 
 struct InferenceContext {
   virtual const AttributeProto* getAttribute(const std::string& name) const = 0;
@@ -314,8 +319,9 @@ inline void propagateShapeFromInputToOutput(
   auto input_type = ctx.getInputType(inputIndex);
   if (TypeProto::kTensorType != input_type->value_case() ||
       TypeProto::kTensorType != output_type->value_case()) {
-    throw std::runtime_error(ONNX_NAMESPACE::to_string(
-        ctx.getInputType(inputIndex)->tensor_type().shape().dim_size()));
+    // throw std::runtime_error(ONNX_NAMESPACE::to_string(
+    //    ctx.getInputType(inputIndex)->tensor_type().shape().dim_size()));
+    abort();
   }
 
   *ctx.getOutputType(outputIndex)->mutable_tensor_type()->mutable_shape() =
@@ -383,8 +389,13 @@ inline TensorShapeProto* getOutputShape(InferenceContext& ctx, size_t n) {
       (output_type->value_case() == TypeProto::kTensorType ||
        output_type->value_case() == TypeProto::VALUE_NOT_SET)) {
     return output_type->mutable_tensor_type()->mutable_shape();
-  } else
+  } else {
+#ifdef ONNX_NO_RTTI
+    return nullptr;
+#else
     fail_type_inference("Output ", n, " expected to have tensor type");
+#endif
+  }
 }
 
 inline void appendDim(TensorShapeProto* shape, int64_t dim_value) {
@@ -771,7 +782,7 @@ inline void UnionShapeInfo(
     for (int i = 0; i < source_rank; ++i) {
       const auto source_dim = source_shape.dim(i);
       const auto target_dim = target_shape->dim(i);
-      bool is_dims_conflict = [&](){
+      bool is_dims_conflict = [&]() {
         if (source_dim.has_dim_value()) {
           if (target_dim.has_dim_value() &&
               target_dim.dim_value() == source_dim.dim_value()) {

@@ -20,11 +20,11 @@ std::string barf(const char* fmt, ...) {
 }
 
 void throw_assert_error(std::string& msg) {
-  throw assert_error(msg);
+  abort(); // throw assert_error(msg);
 }
 
 void throw_tensor_error(std::string& msg) {
-  throw tensor_error(msg);
+  abort(); //   throw tensor_error(msg);
 }
 
 } // namespace ONNX_NAMESPACE

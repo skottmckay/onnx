@@ -6,8 +6,8 @@
 #include <unordered_set>
 #include "onnx/checker.h"
 #include "onnx/defs/operator_sets.h"
-#include "onnx/defs/operator_sets_training.h"
 #include "onnx/defs/operator_sets_preview.h"
+#include "onnx/defs/operator_sets_training.h"
 
 #ifdef ONNX_ML
 #include "onnx/defs/operator_sets_ml.h"
@@ -779,13 +779,16 @@ void OpSchema::BuildFunction(FunctionProto& function_body) const {
 }
 
 void OpSchema::Finalize() {
+#ifdef ORT_NO_EXCEPTIONS
+#define ENFORCE(x)
+#else
 #define ENFORCE(x)                                                          \
   do {                                                                      \
     if (!(x))                                                               \
       throw std::logic_error(                                               \
           "ONNX Schema " + name_ + ": failed validating the check: " + #x); \
   } while (0)
-
+#endif
   // Calculate min/max number of inputs.
   // <Min number of inputs> = <number of "single" inputs> + <number of
   // "optional" but not trailing inputs>. <Max number of inputs> = <number of

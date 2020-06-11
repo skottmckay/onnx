@@ -499,17 +499,18 @@ void check_node(
   }
 
   // Put the removed experimental ops here
-  static std::set<std::string> experimental_ops = {"ATen",
-                                                   "Affine",
-                                                   "ConstantFill",
-                                                   "Crop",
-                                                   "DynamicSlice",
-                                                   "GRUUnit",
-                                                   "GivenTensorFill",
-                                                   "ImageScaler",
-                                                   "ParametricSoftplus",
-                                                   "Scale",
-                                                   "ScaledTanh"};
+  static std::set<std::string> experimental_ops = {
+      "ATen",
+      "Affine",
+      "ConstantFill",
+      "Crop",
+      "DynamicSlice",
+      "GRUUnit",
+      "GivenTensorFill",
+      "ImageScaler",
+      "ParametricSoftplus",
+      "Scale",
+      "ScaledTanh"};
   if (experimental_ops.count(node.op_type())) {
     std::cerr << "Warning: " << node.op_type() << " was a removed "
               << "experimental ops. In the future, we may directly "
@@ -534,7 +535,8 @@ void check_node(
       node.op_type(), domain_version, node.domain());
   if (!schema) {
     if (node.domain() == ONNX_DOMAIN || node.domain() == AI_ONNX_ML_DOMAIN ||
-        node.domain() == "ai.onnx" || node.domain() == AI_ONNX_TRAINING_DOMAIN) {
+        node.domain() == "ai.onnx" ||
+        node.domain() == AI_ONNX_TRAINING_DOMAIN) {
       // fail the checker if op in built-in domains has no schema
       fail_check(
           "No Op registered for " + node.op_type() +
@@ -631,12 +633,12 @@ void check_graph(
     // find that outputs from control flow ops are colliding with names in the
     // inner block
 
-    try {
-      check_node(node, ctx, lex_ctx);
-    } catch (ValidationError& ex) {
-      ex.AppendContext("Bad node spec: " + ProtoDebugString(node));
-      throw ex;
-    }
+    // try {
+    check_node(node, ctx, lex_ctx);
+    //} catch (ValidationError& ex) {
+    //  ex.AppendContext("Bad node spec: " + ProtoDebugString(node));
+    //  throw ex;
+    //}
     // check for SSA form
     for (const auto& output : node.output()) {
       // optional output
@@ -790,8 +792,9 @@ void check_model(const std::string& model_path) {
         model_path,
         ". Please check if it is a valid file.");
   }
-  std::string data{std::istreambuf_iterator<char>{model_stream},
-                   std::istreambuf_iterator<char>{}};
+  std::string data{
+      std::istreambuf_iterator<char>{model_stream},
+      std::istreambuf_iterator<char>{}};
   if (!ParseProtoFromBytes(&model, data.c_str(), data.size())) {
     fail_check(
         "Unable to parse model from file:",
