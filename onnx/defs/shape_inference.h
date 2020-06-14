@@ -42,9 +42,14 @@ class InferenceError final : public std::runtime_error {
   std::string expanded_message_;
 };
 
-#ifdef ONNX_NO_RTTI
-#define fail_type_inference(...) static_cast<void>(0);
-#define fail_shape_inference(...) static_cast<void>(0);
+#ifdef ONNX_NO_EXCEPTIONS
+#define fail_type_inference(...)                                     \
+  std::cerr << ONNX_NAMESPACE::MakeString(__VA_ARGS__) << std::endl; \
+  abort();
+#define fail_shape_inference(...)                                    \
+  std::cerr << ONNX_NAMESPACE::MakeString(__VA_ARGS__) << std::endl; \
+  abort();
+
 #else
 #define fail_type_inference(...)        \
   throw ONNX_NAMESPACE::InferenceError( \
@@ -319,9 +324,14 @@ inline void propagateShapeFromInputToOutput(
   auto input_type = ctx.getInputType(inputIndex);
   if (TypeProto::kTensorType != input_type->value_case() ||
       TypeProto::kTensorType != output_type->value_case()) {
-    // throw std::runtime_error(ONNX_NAMESPACE::to_string(
-    //    ctx.getInputType(inputIndex)->tensor_type().shape().dim_size()));
+    auto msg = ONNX_NAMESPACE::to_string(
+        ctx.getInputType(inputIndex)->tensor_type().shape().dim_size());
+#ifdef ONNX_NO_EXCEPTIONS
+    std::cerr << msg << std::endl;
     abort();
+#else
+    throw std::runtime_error(msg);
+#endif
   }
 
   *ctx.getOutputType(outputIndex)->mutable_tensor_type()->mutable_shape() =

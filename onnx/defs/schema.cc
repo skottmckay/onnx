@@ -779,8 +779,16 @@ void OpSchema::BuildFunction(FunctionProto& function_body) const {
 }
 
 void OpSchema::Finalize() {
-#ifdef ORT_NO_EXCEPTIONS
-#define ENFORCE(x)
+#ifdef ONNX_NO_EXCEPTIONS
+#define ENFORCE(x)                                                           \
+  do {                                                                       \
+    \ 
+  std::cerr                                                                  \
+        << ("ONNX Schema " + name_ + ": failed validating the check: " + #x) \
+        << std::endl;                                                        \
+    abort();                                                                 \
+  } while (0)
+
 #else
 #define ENFORCE(x)                                                          \
   do {                                                                      \
@@ -791,12 +799,12 @@ void OpSchema::Finalize() {
 #endif
   // Calculate min/max number of inputs.
   // <Min number of inputs> = <number of "single" inputs> + <number of
-  // "optional" but not trailing inputs>. <Max number of inputs> = <number of
-  // all inputs or std::numeric_limits<int>::max() (if the last input is
+  // "optional" but not trailing inputs>. <Max number of inputs> = <number
+  // of all inputs or std::numeric_limits<int>::max() (if the last input is
   // variadic).
 
-  // Flag indicates whether an optional input is trailing one (there's no single
-  // or variadic input behind).
+  // Flag indicates whether an optional input is trailing one (there's no
+  // single or variadic input behind).
   for (size_t i = 0; i < inputs_.size(); ++i) {
     switch (inputs_[i].GetOption()) {
       case OpSchema::Single:

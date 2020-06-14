@@ -633,12 +633,17 @@ void check_graph(
     // find that outputs from control flow ops are colliding with names in the
     // inner block
 
-    // try {
+#ifdef ONNX_NO_EXCEPTIONS
     check_node(node, ctx, lex_ctx);
-    //} catch (ValidationError& ex) {
-    //  ex.AppendContext("Bad node spec: " + ProtoDebugString(node));
-    //  throw ex;
-    //}
+#else
+    try {
+      check_node(node, ctx, lex_ctx);
+    } catch (ValidationError& ex) {
+      ex.AppendContext("Bad node spec: " + ProtoDebugString(node));
+      throw ex;
+    }
+#endif
+
     // check for SSA form
     for (const auto& output : node.output()) {
       // optional output

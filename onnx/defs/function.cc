@@ -33,15 +33,27 @@ void FunctionExpandHelper(
 
   for (int idx = 0; idx < node.input_size(); ++idx) {
     if (idx >= func.input_size()) {
-      abort(); // throw std::runtime_error("Input for function node " +
-               // node_name + " is out of bounds");
+#ifdef ONNX_NO_EXCEPTIONS
+      std::cerr << "Input for function node " << node_name
+                << " is out of bounds" << std::endl;
+      abort();
+#else
+      throw std::runtime_error(
+          "Input for function node " + node_name + " is out of bounds");
+#endif
     }
     io_names_map[func.input().Get(idx)] = node.input().Get(idx);
   }
   for (int idx = 0; idx < node.output_size(); ++idx) {
     if (idx >= func.output_size()) {
-      abort(); // throw std::runtime_error("Output for function node " +
-               // node_name + " is out of bounds");
+#ifdef ONNX_NO_EXCEPTIONS
+      std::cerr << "Output for function node " << node_name
+                << " is out of bounds" << std::endl;
+      abort();
+#else
+      throw std::runtime_error(
+          "Output for function node " + node_name + " is out of bounds");
+#endif
     }
     // If the node output is missing, the corresponding function output should
     // be treated as an internal value (not as missing) because it could also be

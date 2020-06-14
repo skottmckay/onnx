@@ -50,7 +50,12 @@ void checkShapesAndTypes(
     ss << "Inferred elem type differs from existing elem type: ("
        << getElemTypeString(inferredType) << ") vs ("
        << getElemTypeString(existingType) << ")";
-    abort(); // throw std::runtime_error(ss.str());
+#ifdef ONNX_NO_EXCEPTIONS
+    std::cerr << ss.str() << std::endl;
+    abort();
+#else
+    throw std::runtime_error(ss.str());
+#endif
   }
 
   if (!inferredType.has_shape() || !existingType.has_shape()) {
@@ -62,7 +67,12 @@ void checkShapesAndTypes(
     ss << "Inferred shape and existing shape differ in rank: ("
        << inferredType.shape().dim_size() << ") vs ("
        << existingType.shape().dim_size() << ")";
-    abort(); // throw std::runtime_error(ss.str());
+#ifdef ONNX_NO_EXCEPTIONS
+    std::cerr << ss.str() << std::endl;
+    abort();
+#else
+    throw std::runtime_error(ss.str());
+#endif
   }
 
   for (int i = 0; i < inferredType.shape().dim_size(); ++i) {
@@ -74,7 +84,12 @@ void checkShapesAndTypes(
       ss << "Inferred shape and existing shape differ in dimension " << i
          << ": (" << inferredDim.dim_value() << ") vs ("
          << existingDim.dim_value() << ")";
-      abort(); // throw std::runtime_error(ss.str());
+#ifdef ONNX_NO_EXCEPTIONS
+      std::cerr << ss.str() << std::endl;
+      abort();
+#else
+      throw std::runtime_error(ss.str());
+#endif
     }
   }
 }
@@ -217,73 +232,85 @@ static void InferShapesImpl(
     if (!schema) {
       continue;
     } else if (schema->has_type_and_shape_inference_function()) {
-      // try {
+#ifdef ONNX_NO_EXCEPTIONS
       schema->GetTypeAndShapeInferenceFunction()(ctx);
-      //} catch (const ONNX_NAMESPACE::InferenceError& ex) {
-      //  (void)ex;
-      //  // Continue with inference for remaining nodes
-      //  continue;
-      //}
+#else
+      try {
+        schema->GetTypeAndShapeInferenceFunction()(ctx);
+      } catch (const ONNX_NAMESPACE::InferenceError& ex) {
+        (void)ex;
+        // Continue with inference for remaining nodes
+        continue;
+      }
+#endif
     } else if (schema->HasFunction()) {
-      // try {
+#ifdef ONNX_NO_EXCEPTIONS
       InferShapeForFunctionNode(schema->GetFunction(), schema_registry, ctx);
-      //} catch (const ONNX_NAMESPACE::InferenceError& function_ex) {
-      //  (void)function_ex;
-      //  continue;
-      //}
+#else
+      try {
+        InferShapeForFunctionNode(schema->GetFunction(), schema_registry, ctx);
+      } catch (const ONNX_NAMESPACE::InferenceError& function_ex) {
+        (void)function_ex;
+        continue;
+      }
+#endif
     } else {
       // Continue with inference for remaining nodes
       continue;
     }
 
-    // try {
-    if (check_type) {
-      schema->CheckInputOutputType(ctx);
-    }
-    for (int i = 0; i < n.output_size(); ++i) {
-      const auto* inferredType = ctx.getOutputType(i);
-      if (!inferredType->has_tensor_type() &&
-          !inferredType->has_sequence_type()) {
-        continue;
+#ifndef ONNX_NO_EXCEPTIONS
+    try {
+#endif
+      if (check_type) {
+        schema->CheckInputOutputType(ctx);
       }
-
-      if (inferredType->has_tensor_type()) {
-        const auto& inferredTensorType = inferredType->tensor_type();
-
-        // Bail out early if shape inference does nothing useful.
-        if (inferredTensorType.elem_type() == TensorProto::UNDEFINED &&
-            !inferredTensorType.has_shape()) {
+      for (int i = 0; i < n.output_size(); ++i) {
+        const auto* inferredType = ctx.getOutputType(i);
+        if (!inferredType->has_tensor_type() &&
+            !inferredType->has_sequence_type()) {
           continue;
         }
+
+        if (inferredType->has_tensor_type()) {
+          const auto& inferredTensorType = inferredType->tensor_type();
+
+          // Bail out early if shape inference does nothing useful.
+          if (inferredTensorType.elem_type() == TensorProto::UNDEFINED &&
+              !inferredTensorType.has_shape()) {
+            continue;
+          }
+        }
+
+        // Find any pre-existing type and shape info. If there is such,
+        // then check for compatibility with the inferred
+        // information. Otherwise, initialize it in an empty state.
+        auto iter = valueTypesByName.find(n.output(i));
+        TypeProto* existingType = nullptr;
+        if (iter != valueTypesByName.end()) {
+          existingType = iter->second;
+          checkShapesAndTypes(*inferredType, *existingType);
+        } else {
+          auto vi = g->add_value_info();
+          vi->set_name(n.output(i));
+          existingType = vi->mutable_type();
+        }
+
+        // Now we can merge pre-existing and inferred info, without
+        // further need for error-checking.
+        mergeShapesAndTypes(*inferredType, existingType);
+
+        // Make merged info available to further inference.
+        valueTypesByName[n.output(i)] = existingType;
       }
-
-      // Find any pre-existing type and shape info. If there is such,
-      // then check for compatibility with the inferred
-      // information. Otherwise, initialize it in an empty state.
-      auto iter = valueTypesByName.find(n.output(i));
-      TypeProto* existingType = nullptr;
-      if (iter != valueTypesByName.end()) {
-        existingType = iter->second;
-        checkShapesAndTypes(*inferredType, *existingType);
-      } else {
-        auto vi = g->add_value_info();
-        vi->set_name(n.output(i));
-        existingType = vi->mutable_type();
-      }
-
-      // Now we can merge pre-existing and inferred info, without
-      // further need for error-checking.
-      mergeShapesAndTypes(*inferredType, existingType);
-
-      // Make merged info available to further inference.
-      valueTypesByName[n.output(i)] = existingType;
+#ifndef ONNX_NO_EXCEPTIONS
+    } catch (const std::runtime_error& err) {
+      std::string op_name = n.has_name() ? n.name() : "no name";
+      std::cerr << "(op_type:" << n.op_type() << ", name:" << n.name()
+                << "): " << err.what() << '\n';
+      throw;
     }
-    //} catch (const std::runtime_error& err) {
-    //  std::string op_name = n.has_name() ? n.name() : "no name";
-    //  std::cerr << "(op_type:" << n.op_type() << ", name:" << n.name()
-    //            << "): " << err.what() << '\n';
-    //  throw;
-    //}
+#endif
   }
 }
 

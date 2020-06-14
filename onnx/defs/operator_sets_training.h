@@ -12,12 +12,13 @@ namespace ONNX_NAMESPACE {
 // Iterate over schema from ai.onnx.training version 1
 class OpSet_OnnxTraining_ver1 {
  public:
-  static void ForEachSchema(std::function<void(OpSchema&&)> /* fn */) {}
+  static void ForEachSchema(std::function<void(OpSchema&&)> /* fn */) {
+  }
 };
 
 // Register training operators.
 inline void RegisterOnnxTrainingOperatorSetSchema() {
-  // RegisterOpSetSchema<OpSet_OnnxTraining_ver1>();
+  RegisterOpSetSchema<OpSet_OnnxTraining_ver1>();
 }
 
 } // namespace ONNX_NAMESPACE

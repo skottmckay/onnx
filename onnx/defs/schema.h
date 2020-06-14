@@ -95,8 +95,10 @@ class SchemaError final : public std::runtime_error {
   std::string expanded_message_;
 };
 
-#ifdef ORT_NO_EXCEPTIONS
-#define fail_schema(...) static_cast<void>(0);
+#ifdef ONNX_NO_EXCEPTIONS
+#define fail_schema(...)                                             \
+  std::cerr << ONNX_NAMESPACE::MakeString(__VA_ARGS__) << std::endl; \
+  abort()
 #else
 #define fail_schema(...) \
   throw ONNX_NAMESPACE::SchemaError(ONNX_NAMESPACE::MakeString(__VA_ARGS__));
@@ -818,60 +820,63 @@ class OpSchemaRegistry final : public ISchemaRegistry {
   class OpSchemaRegisterOnce final {
    public:
     OpSchemaRegisterOnce(OpSchema& op_schema) {
-      // try {
-      op_schema.Finalize();
+#ifndef ONNX_NO_EXCEPTIONS
+      try {
+#endif
+        op_schema.Finalize();
 
-      auto& m = GetMapWithoutEnsuringRegistration();
+        auto& m = GetMapWithoutEnsuringRegistration();
 
-      auto& op_name = op_schema.Name();
-      auto& op_domain = op_schema.domain();
-      auto ver = op_schema.SinceVersion();
+        auto& op_name = op_schema.Name();
+        auto& op_domain = op_schema.domain();
+        auto ver = op_schema.SinceVersion();
 
-      if (m[op_name][op_domain].count(ver)) {
-        const auto& schema = m[op_name][op_domain][ver];
-        std::stringstream err;
-        err << "Trying to register schema with name " << op_name
-            << " (domain: " << op_domain << " version: " << ver
-            << ") from file " << op_schema.file() << " line "
-            << op_schema.line() << ", but it is already registered from file "
-            << schema.file() << " line " << schema.line() << std::endl;
-        fail_schema(err.str());
+        if (m[op_name][op_domain].count(ver)) {
+          const auto& schema = m[op_name][op_domain][ver];
+          std::stringstream err;
+          err << "Trying to register schema with name " << op_name
+              << " (domain: " << op_domain << " version: " << ver
+              << ") from file " << op_schema.file() << " line "
+              << op_schema.line() << ", but it is already registered from file "
+              << schema.file() << " line " << schema.line() << std::endl;
+          fail_schema(err.str());
+        }
+
+        auto ver_range_map = DomainToVersionRange::Instance().Map();
+        auto ver_range_it = ver_range_map.find(op_domain);
+        if (ver_range_it == ver_range_map.end()) {
+          std::stringstream err;
+          err << "Trying to register schema with name " << op_name
+              << " (domain: " << op_domain << " version: " << ver
+              << ") from file " << op_schema.file() << " line "
+              << op_schema.line() << ", but it its domain is not"
+              << " known by the checker." << std::endl;
+
+          fail_schema(err.str());
+        }
+        auto lower_bound_incl = ver_range_it->second.first;
+        auto upper_bound_incl = ver_range_it->second.second;
+        if (!(lower_bound_incl <= ver && upper_bound_incl >= ver)) {
+          std::stringstream err;
+          err << "Trying to register schema with name " << op_name
+              << " (domain: " << op_domain << " version: " << ver
+              << ") from file " << op_schema.file() << " line "
+              << op_schema.line() << ", but it its version is not "
+              << "in the inclusive range [" << lower_bound_incl << ", "
+              << upper_bound_incl << "] (usually, this means you "
+              << "bumped the operator version but "
+              << "forgot to update the version range in DomainToVersionRange "
+              << "in onnx/defs/schema.h)." << std::endl;
+          fail_schema(err.str());
+        }
+
+        m[op_name][op_domain].insert(
+            std::pair<int, OpSchema&&>(ver, std::move(op_schema)));
+#ifndef ONNX_NO_EXCEPTIONS
+      } catch (const std::exception& e) {
+        std::cerr << "Schema error: " << e.what() << std::endl;
       }
-
-      auto ver_range_map = DomainToVersionRange::Instance().Map();
-      auto ver_range_it = ver_range_map.find(op_domain);
-      if (ver_range_it == ver_range_map.end()) {
-        std::stringstream err;
-        err << "Trying to register schema with name " << op_name
-            << " (domain: " << op_domain << " version: " << ver
-            << ") from file " << op_schema.file() << " line "
-            << op_schema.line() << ", but it its domain is not"
-            << " known by the checker." << std::endl;
-
-        fail_schema(err.str());
-      }
-      auto lower_bound_incl = ver_range_it->second.first;
-      auto upper_bound_incl = ver_range_it->second.second;
-      if (!(lower_bound_incl <= ver && upper_bound_incl >= ver)) {
-        std::stringstream err;
-        err << "Trying to register schema with name " << op_name
-            << " (domain: " << op_domain << " version: " << ver
-            << ") from file " << op_schema.file() << " line "
-            << op_schema.line() << ", but it its version is not "
-            << "in the inclusive range [" << lower_bound_incl << ", "
-            << upper_bound_incl << "] (usually, this means you "
-            << "bumped the operator version but "
-            << "forgot to update the version range in DomainToVersionRange "
-            << "in onnx/defs/schema.h)." << std::endl;
-        fail_schema(err.str());
-      }
-
-      m[op_name][op_domain].insert(
-          std::pair<int, OpSchema&&>(ver, std::move(op_schema)));
-
-      //} catch (const std::exception& e) {
-      //  std::cerr << "Schema error: " << e.what() << std::endl;
-      //}
+#endif
     }
   };
 
@@ -888,9 +893,9 @@ class OpSchemaRegistry final : public ISchemaRegistry {
     }
   }
 
-  // Return the schema with biggest version, which is not greater than specified
-  // <maxInclusiveVersion> in specified domain. Domain with default value
-  // ONNX_DOMAIN means ONNX.
+  // Return the schema with biggest version, which is not greater than
+  // specified <maxInclusiveVersion> in specified domain. Domain with default
+  // value ONNX_DOMAIN means ONNX.
   static const OpSchema* Schema(
       const std::string& key,
       const int maxInclusiveVersion,
@@ -965,7 +970,7 @@ class OpSchemaRegistry final : public ISchemaRegistry {
     }
     return r;
   }
-};
+}; // namespace ONNX_NAMESPACE
 
 void RegisterSchema(OpSchema&& schema);
 

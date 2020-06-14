@@ -30,8 +30,10 @@ class ConvertError final : public std::runtime_error {
   std::string expanded_message_;
 };
 
-#ifdef ORT_NO_EXCEPTIONS
-#define fail_convert(...) static_cast<void>(0);
+#ifdef ONNX_NO_EXCEPTIONS
+#define fail_convert(...)                                            \
+  std::cerr << ONNX_NAMESPACE::MakeString(__VA_ARGS__) << std::endl; \
+  abort();
 #else
 #define fail_convert(...) throw ConvertError(MakeString(__VA_ARGS__));
 #endif

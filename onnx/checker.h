@@ -29,8 +29,10 @@ class ValidationError final : public std::runtime_error {
   std::string expanded_message_;
 };
 
-#ifdef ORT_NO_EXCEPTIONS
-#define fail_check(...) static_cast<void>(0);
+#ifdef ONNX_NO_EXCEPTIONS
+#define fail_check(...)                                              \
+  std::cerr << ONNX_NAMESPACE::MakeString(__VA_ARGS__) << std::endl; \
+  abort();
 #else
 #define fail_check(...)                           \
   throw ONNX_NAMESPACE::checker::ValidationError( \

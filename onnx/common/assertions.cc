@@ -3,6 +3,7 @@
 
 #include <cstdarg>
 #include <cstdio>
+#include <iostream>
 
 #include "onnx/common/assertions.h"
 
@@ -20,11 +21,21 @@ std::string barf(const char* fmt, ...) {
 }
 
 void throw_assert_error(std::string& msg) {
-  abort(); // throw assert_error(msg);
+#ifdef ONNX_NO_EXCEPTIONS
+  std::cerr << msg << std::endl;
+  abort();
+#else
+  throw assert_error(msg);
+#endif
 }
 
 void throw_tensor_error(std::string& msg) {
-  abort(); //   throw tensor_error(msg);
+#ifdef ONNX_NO_EXCEPTIONS
+  std::cerr << msg << std::endl;
+  abort();
+#else
+  throw tensor_error(msg);
+#endif
 }
 
 } // namespace ONNX_NAMESPACE
