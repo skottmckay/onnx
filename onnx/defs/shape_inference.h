@@ -400,8 +400,9 @@ inline TensorShapeProto* getOutputShape(InferenceContext& ctx, size_t n) {
        output_type->value_case() == TypeProto::VALUE_NOT_SET)) {
     return output_type->mutable_tensor_type()->mutable_shape();
   } else {
-#ifdef ONNX_NO_RTTI
-    return nullptr;
+#ifdef ONNX_NO_EXCEPTIONS
+    std::cerr << "Output " << n << " expected to have tensor type" << std::endl;
+    abort();
 #else
     fail_type_inference("Output ", n, " expected to have tensor type");
 #endif

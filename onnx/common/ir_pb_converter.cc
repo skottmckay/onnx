@@ -286,7 +286,7 @@ std::unique_ptr<Graph> graphProtoToGraph(
         std::ostringstream msg;
         msg << "Input " << input << " is undefined!";
 #ifdef ONNX_NO_EXCEPTIONS
-        std::cerr << msg << std::endl;
+        std::cerr << msg.str() << std::endl;
         abort();
 #else
         throw std::out_of_range(msg.str());
